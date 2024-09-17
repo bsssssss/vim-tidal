@@ -218,6 +218,44 @@ endfunction
 function! s:TerminalConfig() abort
 endfunction
 
+function! s:TidalStart()
+  call s:TerminalOpen()
+endfunction
+
+function! s:TidalQuit()
+  if has('nvim') || has('terminal')
+    if s:tidal_term_ghci != -1
+      " send the quit command to ghci
+      if has('nvim')
+        call jobsend(s:tidal_term_ghci, ":quit\<cr>")
+      else
+        call term_sendkeys(s:tidal_term_ghci, ":quit\<cr>")
+      endif
+      sleep 100m
+      " get the buffer number associated with the terminal job
+      let l:buf = bufnr(s:tidal_term_ghci)
+      "echomsg "Buffer number: " .l:buf
+      if l:buf != ''
+        let l:win = bufwinnr(l:buf)
+        "echomsg "Window number: " l:win
+          if l:win != -1
+            " switch to the terminal buffer
+            execute l:win . 'wincmd w'
+            " close the terminal window
+            execute 'bdelete! ' . l:buf
+          endif
+      endif
+      let s:tidal_term_ghci = -1
+    endif
+  endif
+endfunction
+
+function! s:TidalRestart()
+  call s:TidalQuit()
+  sleep 1000m
+  call s:TidalStart()
+endfunction
+
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 " Helpers
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -419,6 +457,10 @@ endfunction
 command -bar -nargs=0 TidalConfig call s:TidalConfig()
 command -range -bar -nargs=0 TidalSend <line1>,<line2>call s:TidalSendRange()
 command -nargs=+ TidalSend1 call s:TidalSend(<q-args>)
+
+command! -nargs=0 TidalStart call s:TidalStart()
+command! -nargs=0 TidalQuit call s:TidalQuit()
+command! -nargs=0 TidalRestart call s:TidalRestart()
 
 command! -nargs=0 TidalHush call s:TidalHush()
 command! -nargs=1 TidalSilence call s:TidalSilence(<args>)
